@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Bell Curve Distributions</title>
+        <!-- Plotly.js -->
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    </head>
+    <body>
+        <div id="plot"></div>
+        <hr />
+        <div id="stats"></div>
+        <hr />
+        <div id="timings"></div>
+
+        <script>
+            var mean = 75; // Mean of the distribution
+            var stdDev = 10; // Standard deviation of the distribution
+            var count = 100000; // Number of random numbers to generate
+
+            // Array of bell curve generation functions
+            var bellCurveFunctions = [
+                // Function to generate random numbers with a bell curve distribution using the Box-Muller transform
+                function generateBellCurveNumbersBoxMuller(mean, stdDev, count) {
+                    var numbers = [];
+                    for (var i = 0; i < count; i++) {
+                        var u1 = Math.random();
+                        var u2 = Math.random();
+                        var z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+                        numbers.push(mean + z0 * stdDev);
+                    }
+                    return numbers;
+                },
+                /*function generateBellCurveNumbersSineWave(mean, stdDev, count) {
+  var numbers = [];
+  for (var i = 0; i < count; i++) {
+    var u = Math.random();
+    var z0 = Math.sin(Math.PI / 2 + Math.PI * u);
+    numbers.push(mean + z0 * stdDev);
+  }
+  return numbers;
+},*/
+
+                function generateBellCurveNumbersCLT(mean, stdDev, count) {
+                    var numbers = [];
+                    var n = 12; // Number of uniform random variables to sum for each sample
+
+                    for (var i = 0; i < count; i++) {
+                        var sum = 0;
+                        for (var j = 0; j < n; j++) {
+                            sum += Math.random(); // Summing uniform random variables
+                        }
+                        var z = (sum - n / 2) / Math.sqrt(n / 12); // Standardizing to get standard normal variable
+                        numbers.push(mean + stdDev * z); // Applying mean and standard deviation
+                    }
+                    return numbers;
+                },
+
+                // Function to generate random numbers with a bell curve distribution using the polar method
+                function generateBellCurveNumbersPolar(mean, stdDev, count) {
+                    var numbers = [];
+                    for (var i = 0; i < count; i++) {
+                        var u1, u2, z0;
+                        do {
+                            u1 = Math.random() * 2 - 1;
+                            u2 = Math.random() * 2 - 1;
+                            z0 = u1 * u1 + u2 * u2;
+                        } while (z0 >= 1 || z0 === 0);
+                        var factor = Math.sqrt((-2 * Math.log(z0)) / z0);
+                        numbers.push(mean + stdDev * u1 * factor);
+                    }
+                    return numbers;
+                },
+
+                // Function to generate random numbers with a bell curve distribution using the Ziggurat algorithm
+                /*function generateBellCurveNumbersZiggurat(mean, stdDev, count) {
+      var numbers = [];
+      var generated = 0;
+      var r = 0;
+      var x, y;
+
+      // Constants for the Ziggurat algorithm
+      var X_TABLE = [
+        3.65415288536101,  // X0
+        0.675489256290969, // X1
+        0.150897150315197, // X2
+        0.06888370749771,  // X3
+        0.033385479410473  // X4
+      ];
+
+      var Y_TABLE = [
+        0.636619772367581, // Y0
+        0.412542972725442, // Y1
+        0.239582825786648, // Y2
+        0.065663996111858, // Y3
+        0.033385479410473  // Y4
+      ];
+
+      var V_MAX = 7.697117470131049;
+
+      while (generated < count) {
+        while (true) {
+          var sign = Math.random() < 0.5 ? -1 : 1;
+          var index = Math.floor(Math.random() * 256);
+          var x = sign * (Math.random() * X_TABLE[index]);
+
+          if (Math.abs(x) < X_TABLE[index + 1]) {
+            generated++;
+            numbers.push(x * stdDev + mean);
+            break;
+          }
+
+          if (index === 0) {
+            while (true) {
+              x = -Math.log(Math.random()) / V_MAX;
+              y = -Math.log(Math.random());
+
+              if (y > -2 * x * x) {
+                generated++;
+                numbers.push(sign * (V_MAX + x) * stdDev + mean);
+                break;
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      return numbers;
+    },*/
+            ];
+            // Measure time taken by each method and generate data
+            var data = [];
+            var timings = [];
+            for (var i = 0; i < bellCurveFunctions.length; i++) {
+                var startTime = performance.now();
+                var generatedData = bellCurveFunctions[i](mean, stdDev, count);
+                var endTime = performance.now();
+                data.push(generatedData);
+                timings.push(endTime - startTime);
+            }
+
+            // Create histograms for each distribution
+            var traces = [];
+            for (var i = 0; i < bellCurveFunctions.length; i++) {
+                var trace = {
+                    x: data[i],
+                    type: "histogram",
+                    name: bellCurveFunctions[i].name,
+                    opacity: 0.7,
+                };
+                traces.push(trace);
+            }
+
+            var layout = {
+                title: "Bell Curve Distributions",
+                xaxis: { title: "Value" },
+                yaxis: { title: "Frequency" },
+                barmode: "overlay",
+            };
+
+            // Display stats
+            var statsElement = document.getElementById("stats");
+            statsElement.innerHTML = "Stats:<br>";
+            statsElement.innerHTML += "mean: " + mean + "<br>";
+            statsElement.innerHTML += "stdDev: " + stdDev + "<br>";
+            statsElement.innerHTML += "count: " + count + "<br>";
+
+            // Display time taken for each method
+            var timingsElement = document.getElementById("timings");
+            timingsElement.innerHTML = "Time taken by each method (milliseconds):<br>";
+            for (var i = 0; i < bellCurveFunctions.length; i++) {
+                timingsElement.innerHTML += bellCurveFunctions[i].name + ": " + timings[i] + "<br>";
+            }
+
+            // Plot histograms for each distribution
+            Plotly.newPlot("plot", traces, layout);
+        </script>
+    </body>
+</html>
