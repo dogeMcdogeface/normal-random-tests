@@ -41,5 +41,25 @@ var bellCurveFunctions = [
       numbers.push(mean + stdDev * u1 * factor);
     }
     return numbers;
-  }
+  },
+    function generateBellCurveNumbersJake(mean, stdDev, count) {
+    var numbers = [];
+    for (var i = 0; i < count; i++) {
+      var u1 = Math.random();
+      if(u1 < 0.75){
+		u1 /= 0.75;
+		u1 = Math.pow(u1 , 0.25)
+		u1 *= 0.75;
+	  }else{
+		u1 -= 0.75;
+		u1 *= 4;
+		u1 = Math.pow(u1 , 0.25)
+		u1 = 1.0- u1;
+		u1 = 0.75 + 0.25*u1
+	  }
+	  
+      numbers.push( u1 * stdDev*10);
+    }
+    return numbers;
+  },
 ];
